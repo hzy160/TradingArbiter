@@ -6,38 +6,37 @@ contract Trading {
     address Requirer;
 
     struct Data {
-        uint256 dataPrice;
-        uint256 dataDeposit;
-        uint256 dataEveAmount;
+        uint256 daPri;
+        uint256 daRep;
         uint256 amount;
-        address dataProvider;
-        string Datastyle;
-        string description;
+        uint256 arbFlag;
+        bool trdFlag;
+        address daPrer;
+        string daSty;
+        string descp;
         string IPFS;
-        bool tradeFlag;
-        uint256 arbitrFlag;
         string DataPK;
     }
 
     struct DataEve {
-        string integrityEve;
-        string consistencyEve;
-        string accuracyEve;
-        uint8 integritySco;
-        uint8 consistencySco;
-        uint8 accuracySco;
-        uint8 qualitySco;
+        uint256 inteSco;
+        uint256 consSco;
+        uint256 accSco;
+        uint256 qualSco;
+        string inteEve;
+        string consEve;
+        string accEve;
     }
 
     struct DataKey {
-        address RequirerAdd;
-        string RequirerPK;
+        address ReqAdd;
+        string ReqPK;
         string OwnerSK;
     }
 
     struct datasEve {
         uint256 buyerNum;
-        DataEve[1000] dataEves;
+        DataEve[100] dataEves;
     }
 
     mapping(string => Data) Datas;
@@ -48,22 +47,22 @@ contract Trading {
         string memory DataPk,
         string memory IPFS,
         string memory dataUID,
-        string memory Datastyle,
+        string memory daSty,
         uint256 amount,
-        string memory description,
-        uint256 dataPrice,
-        uint256 dataDeposit
-    ) public {
-        payable(address(this)).transfer(Datas[dataUID].dataDeposit);
-        Datas[dataUID].dataProvider = msg.sender;
+        string memory descp,
+        uint256 daPri,
+        uint256 daRep
+    ) public payable {
+        payable(address(this)).transfer(Datas[dataUID].daRep);
+        Datas[dataUID].daPrer = msg.sender;
         Datas[dataUID].IPFS = IPFS;
-        Datas[dataUID].Datastyle = Datastyle;
+        Datas[dataUID].daSty = daSty;
         Datas[dataUID].amount = amount;
-        Datas[dataUID].description = description;
-        Datas[dataUID].dataPrice = dataPrice;
-        Datas[dataUID].dataDeposit = dataDeposit;
-        Datas[dataUID].tradeFlag = false;
-        Datas[dataUID].arbitrFlag = 0;
+        Datas[dataUID].descp = descp;
+        Datas[dataUID].daPri = daPri;
+        Datas[dataUID].daRep = daRep;
+        Datas[dataUID].trdFlag = false;
+        Datas[dataUID].arbFlag = 0;
         Datas[dataUID].amount = 0;
         Datas[dataUID].DataPK = DataPk;
         DatasEves[dataUID].buyerNum = 0;
@@ -74,103 +73,106 @@ contract Trading {
         view
         returns (
             address Provider,
-            string memory Datastyle,
+            string memory daSty,
             uint256 amount,
-            string memory description,
-            uint256 dataPrice,
-            bool tradeFlag,
-            uint256 arbitrFlag
+            string memory descp,
+            uint256 daPri,
+            bool trdFlag,
+            uint256 arbFlag
         )
     {
         return (
-            Datas[_dataUID].dataProvider,
-            Datas[_dataUID].Datastyle,
+            Datas[_dataUID].daPrer,
+            Datas[_dataUID].daSty,
             Datas[_dataUID].amount,
-            Datas[_dataUID].description,
-            Datas[_dataUID].dataPrice,
-            Datas[_dataUID].tradeFlag,
-            Datas[_dataUID].arbitrFlag
+            Datas[_dataUID].descp,
+            Datas[_dataUID].daPri,
+            Datas[_dataUID].trdFlag,
+            Datas[_dataUID].arbFlag
         );
     }
 
-    function getData(string memory _dataUID, string memory _RequirerPK)
+    modifier noBuyer(string memory _dataUID) {
+        require(Datas[_dataUID].trdFlag == false);
+        _;
+    }
+
+    function getData(string memory _dataUID, string memory _ReqPK)
         public
         payable
+        noBuyer(_dataUID)
         returns (string memory IPFS)
     {
-        if (Datas[_dataUID].tradeFlag == false) {
-            payable(address(this)).transfer(
-                Datas[_dataUID].dataPrice + Datas[_dataUID].dataDeposit
-            ); //在正式交易中押金应由双方进行协商
-            Datas[_dataUID].tradeFlag = true;
-            Datas[_dataUID].arbitrFlag = 0;
-            DataKeys[_dataUID].RequirerAdd = msg.sender;
-            DataKeys[_dataUID].RequirerPK = _RequirerPK;
-            return (Datas[_dataUID].IPFS);
-        }
+        payable(address(this)).transfer(
+            Datas[_dataUID].daPri + Datas[_dataUID].daRep
+        ); //在正式交易中押金应由双方进行协商
+        Datas[_dataUID].trdFlag = true;
+        Datas[_dataUID].arbFlag = 0;
+        DataKeys[_dataUID].ReqAdd = msg.sender;
+        DataKeys[_dataUID].ReqPK = _ReqPK;
+        return (Datas[_dataUID].IPFS);
+    }
+
+    modifier isOwner(string memory _dataUID) {
+        require(Datas[_dataUID].daPrer == msg.sender);
+        _;
     }
 
     function transKey(string memory _dataUID, string memory _OwnerSk)
         public
         payable
+        isOwner(_dataUID)
     {
-        if (Datas[_dataUID].dataProvider == msg.sender) {
-            payable(address(this)).transfer(
-                Datas[_dataUID].dataPrice + Datas[_dataUID].dataDeposit
-            );
-            DataKeys[_dataUID].OwnerSK = _OwnerSk;
-        }
+        payable(address(this)).transfer(
+            Datas[_dataUID].daPri + Datas[_dataUID].daRep
+        );
+        DataKeys[_dataUID].OwnerSK = _OwnerSk;
+    }
+
+    modifier OnlyBuyer(string memory _dataUID) {
+        require(DataKeys[_dataUID].ReqAdd == msg.sender);
+        _;
     }
 
     function getKey(string memory _dataUID)
         public
         payable
+        OnlyBuyer(_dataUID)
         returns (string memory OwnerSK, string memory OwnerPK)
     {
-        if (DataKeys[_dataUID].RequirerAdd == msg.sender) {
-            return (DataKeys[_dataUID].OwnerSK, Datas[_dataUID].DataPK);
-        }
-    }
-
-    modifier OnlyBuyer(string memory _dataUID) {
-        require(DataKeys[_dataUID].RequirerAdd == msg.sender);
-        _;
+        return (DataKeys[_dataUID].OwnerSK, Datas[_dataUID].DataPK);
     }
 
     function writeEve(
         string memory _dataUID,
-        string memory integrityEve,
-        uint8 integritySco,
-        string memory consistencyEve,
-        uint8 consistencySco,
-        string memory accuracyEve,
-        uint8 accuracySco,
-        uint8 qualitySco
+        string memory inteEve,
+        uint8 inteSco,
+        string memory consEve,
+        uint8 consSco,
+        string memory accEve,
+        uint8 accSco,
+        uint8 qualSco
     ) public payable OnlyBuyer(_dataUID) {
         uint256 Id = DatasEves[_dataUID].buyerNum++;
-        DatasEves[_dataUID].dataEves[Id].integrityEve = integrityEve;
-        DatasEves[_dataUID].dataEves[Id].integritySco = integritySco;
-        DatasEves[_dataUID].dataEves[Id].consistencyEve = consistencyEve;
-        DatasEves[_dataUID].dataEves[Id].consistencySco = consistencySco;
-        DatasEves[_dataUID].dataEves[Id].accuracyEve = accuracyEve;
-        DatasEves[_dataUID].dataEves[Id].accuracySco = accuracySco;
-        DatasEves[_dataUID].dataEves[Id].qualitySco = qualitySco;
-        Datas[_dataUID].tradeFlag = false;
-        payable(msg.sender).transfer(Datas[_dataUID].dataDeposit);
-        payable(Datas[_dataUID].dataProvider).transfer(
-            Datas[_dataUID].dataPrice * 2 + Datas[_dataUID].dataDeposit
+        DatasEves[_dataUID].dataEves[Id].inteEve = inteEve;
+        DatasEves[_dataUID].dataEves[Id].inteSco = inteSco;
+        DatasEves[_dataUID].dataEves[Id].consEve = consEve;
+        DatasEves[_dataUID].dataEves[Id].consSco = consSco;
+        DatasEves[_dataUID].dataEves[Id].accEve = accEve;
+        DatasEves[_dataUID].dataEves[Id].accSco = accSco;
+        DatasEves[_dataUID].dataEves[Id].qualSco = qualSco;
+        Datas[_dataUID].trdFlag = false;
+        payable(msg.sender).transfer(Datas[_dataUID].daRep);
+        payable(Datas[_dataUID].daPrer).transfer(
+            Datas[_dataUID].daPri * 2 + Datas[_dataUID].daRep
         );
-    }
-
-    function getBalance() public view returns (uint256) {
-        return address(this).balance;
     }
 
     fallback() external payable {}
 
     receive() external payable {}
 
-    uint256 minersNum = 0;
+    uint256 minNum = 0;
 
     struct miner {
         address minerAdd;
@@ -179,23 +181,23 @@ contract Trading {
     }
 
     struct arbReq {
+        uint256 Abtype; //标记仲裁类型
+        uint256 ID;
         string dataUID;
         string IPFS;
         string wrongProve;
-        uint8 Abtype; //标记仲裁类型
-        uint256 ID;
     }
 
     struct arbiter {
         uint256 num;
         uint256 time;
         uint256 Reward;
+        bytes32[9] arbiterAddHash;
         int8 end;
-        int8[] arbitResults;
-        bool[] getRewards;
-        uint256[] arbiterAddHash;
-        string[] AbPK;
-        string[] IPFS;
+        int8[9] arbitResults;
+        bool[9] getRewards;
+        string[9] AbPK;
+        string[9] IPFS;
     }
 
     mapping(uint256 => miner) miners;
@@ -203,54 +205,57 @@ contract Trading {
     mapping(address => arbReq) arbs;
     mapping(string => arbiter) arbiters;
 
+    modifier notRegister() {
+        require(MinersFlag[msg.sender] != 1);
+        _;
+    }
+
     function MinersRegister(string memory minersProve, string memory minerPK)
         public
+        notRegister
         returns (string memory flags)
     {
-        if (MinersFlag[msg.sender] != 1) {
-            miners[minersNum].minerAdd = msg.sender;
-            miners[minersNum].minerPro = minersProve;
-            miners[minersNum++].minerPK = minerPK;
-            MinersFlag[msg.sender] = 1;
-            return ("1");
-        }
+        miners[minNum].minerAdd = msg.sender;
+        miners[minNum].minerPro = minersProve;
+        miners[minNum++].minerPK = minerPK;
+        MinersFlag[msg.sender] = 1;
+        return ("1");
     }
 
     function setArbiters(
         uint256 _num,
-        uint8 _Abtype,
+        uint256 _Abtype,
         string memory _wrongProve,
         string memory _dataUID
     ) public {
-        payable(address(this)).transfer(Datas[_dataUID].dataDeposit);
+        payable(address(this)).transfer(Datas[_dataUID].daRep);
         uint256 random;
         uint256 _random;
-        Datas[_dataUID].arbitrFlag = _Abtype;
+        address tmp;
+        string memory IPFS = Datas[_dataUID].IPFS;
+        Datas[_dataUID].arbFlag = _Abtype;
         random =
             uint256(
                 keccak256(abi.encodePacked(block.prevrandao, block.timestamp))
             ) %
-            10000;
+            1000;
         arbiters[_dataUID].time = block.timestamp;
         arbiters[_dataUID].num = _num;
         for (uint256 i = 0; i < _num; i++) {
-            arbiters[_dataUID].arbiterAddHash[i] = uint256(
-                keccak256(abi.encodePacked(miners[_random].minerAdd))
+            _random = (random * (i + 1)) % minNum;
+            arbiters[_dataUID].arbiterAddHash[i] = keccak256(
+                abi.encodePacked(miners[_random].minerAdd)
             );
+            tmp = miners[_random].minerAdd;
             arbiters[_dataUID].arbitResults[i] = 0;
             arbiters[_dataUID].getRewards[i] = true;
             arbiters[_dataUID].AbPK[i] = miners[_random].minerPK;
-            _random = (random * (i + 1)) % minersNum;
-            arbs[miners[_random].minerAdd].IPFS = Datas[_dataUID].IPFS;
-            arbs[miners[_random].minerAdd].wrongProve = _wrongProve;
-            arbs[miners[_random].minerAdd].Abtype = _Abtype;
-            arbs[miners[_random].minerAdd].dataUID = _dataUID;
-            arbs[miners[_random].minerAdd].ID = i;
+            arbs[tmp].IPFS = IPFS;
+            arbs[tmp].wrongProve = _wrongProve;
+            arbs[tmp].Abtype = _Abtype;
+            arbs[tmp].dataUID = _dataUID;
+            arbs[tmp].ID = i;
         }
-    }
-
-    function WheatherGetMission() public view returns (string memory dataUID) {
-        return (arbs[msg.sender].dataUID);
     }
 
     function getAbK(string memory _dataUID, uint256 i)
@@ -269,136 +274,127 @@ contract Trading {
         arbiters[_dataUID].IPFS[i] = IPFS;
     }
 
-    function getEVidence(uint256 id)
+    function getEVidence()
         public
         payable
         returns (
             string memory ev1,
             string memory ev2,
             string memory ev3,
-            uint256 ID
+            uint256 _ID
         )
     {
-        payable(address(this)).transfer(
-            Datas[arbs[msg.sender].dataUID].dataDeposit
-        );
-        if (arbs[msg.sender].Abtype == 1) //IPFS错误
+        payable(address(this)).transfer(Datas[arbs[msg.sender].dataUID].daRep);
+
+        uint256 Abtype = arbs[msg.sender].Abtype;
+        uint256 ID = arbs[msg.sender].ID;
+        string memory wrongProve = arbs[msg.sender].wrongProve;
+        string memory IPFS = arbs[msg.sender].IPFS;
+        string memory PK = Datas[arbs[msg.sender].dataUID].DataPK;
+        if (Abtype == 1) //IPFS错误
         {
-            return (arbs[msg.sender].IPFS, "", "", arbs[msg.sender].ID);
-        } else if (arbs[msg.sender].Abtype == 2) //密文错误
+            return (IPFS, "", "", ID);
+        } else if (Abtype == 2) //密文错误
         {
-            return (
-                arbs[msg.sender].wrongProve,
-                Datas[arbs[msg.sender].dataUID].DataPK,
-                Datas[arbs[msg.sender].dataUID].IPFS,
-                arbs[msg.sender].ID
-            );
-        } else if (arbs[msg.sender].Abtype == 4) //数据外泄
+            return (wrongProve, PK, IPFS, ID);
+        } else if (Abtype == 4) //数据外泄
         {
-            return (arbs[msg.sender].wrongProve, "", "", arbs[msg.sender].ID);
-        } else if (arbs[msg.sender].Abtype == 5) //数据重复售卖
-        {
-            return (
-                arbs[msg.sender].wrongProve,
-                arbs[msg.sender].IPFS,
-                arbiters[arbs[msg.sender].dataUID].IPFS[id],
-                arbs[msg.sender].ID
-            );
-        } else if (arbs[msg.sender].Abtype == 3) //密钥错误
+            return (wrongProve, "", "", ID);
+        } else if (Abtype == 5) //数据重复售卖
         {
             return (
-                arbs[msg.sender].wrongProve,
-                Datas[arbs[msg.sender].dataUID].DataPK,
-                "",
-                arbs[msg.sender].ID
+                wrongProve,
+                IPFS,
+                arbiters[arbs[msg.sender].dataUID].IPFS[ID],
+                ID
             );
+        } else if (Abtype == 3) //密钥错误
+        {
+            return (wrongProve, PK, "", ID);
         }
+    }
+
+    modifier isAb(string memory _dataUID, uint256 ID) {
+        require(
+            keccak256(abi.encodePacked(msg.sender)) ==
+                arbiters[_dataUID].arbiterAddHash[ID]
+        );
+        _;
     }
 
     function returnResults(
         string memory _dataUID,
         uint256 ID,
         int8 result
-    ) public {
-        if (
-            uint256(keccak256(abi.encodePacked(msg.sender))) ==
-            arbiters[_dataUID].arbiterAddHash[ID]
-        ) {
-            arbiters[_dataUID].arbitResults[ID] = result % 1;
+    ) public isAb(_dataUID, ID) {
+        if (result > 0) {
+            arbiters[_dataUID].arbitResults[ID] = 1;
+        } else if (result < 0) {
+            arbiters[_dataUID].arbitResults[ID] = -1;
         }
     }
 
     modifier enoughTime(string memory dataUID) {
-        require(block.timestamp - arbiters[dataUID].time >= 60 * 60 * 24);
+        require(block.timestamp - arbiters[dataUID].time >= 86400);
         _;
     }
 
     function getResults(string memory dataUID)
         public
+        payable
         enoughTime(dataUID) //不考虑仲裁方不参与的情况
     {
         int256 end = 0;
         uint256 Reward;
         uint256 Num;
-        for (uint256 i = arbiters[dataUID].num - 1; i >= 0; i--) {
+        uint256 dataRep = Datas[dataUID].daRep /4;
+        uint256 arbTmp = Datas[dataUID].arbFlag;
+        address buyer = DataKeys[dataUID].ReqAdd;
+        address owner = Datas[dataUID].daPrer;
+        for (uint256 i = 0; i < arbiters[dataUID].num; i++) {
             end += arbiters[dataUID].arbitResults[i];
-        }
-        if (
-            arbs[msg.sender].Abtype == 1 ||
-            arbs[msg.sender].Abtype == 2 ||
-            arbs[msg.sender].Abtype == 3
-        ) {
+        } //仲裁方设为奇数量，则只会出现非0结果
+
+        if (arbTmp < 4) {
             if (end > 0) //买方错
             {
-                payable(Datas[dataUID].dataProvider).transfer(
-                    Datas[dataUID].dataDeposit / 4
-                );
+                payable(owner).transfer(dataRep);
+            } else {
+                payable(buyer).transfer(dataRep);
+                Datas[dataUID].trdFlag = false;
             }
-            //仲裁方设为奇数量，则只会出现非0结果
-            else {
-                payable(DataKeys[dataUID].RequirerAdd).transfer(
-                    Datas[dataUID].dataDeposit / 4
-                );
-                Datas[dataUID].tradeFlag = false;
-            }
-            Datas[dataUID].arbitrFlag = 0;
-            Datas[dataUID].tradeFlag = false;
-        } else if (arbs[msg.sender].Abtype == 4) {
+            Datas[dataUID].arbFlag = 0;
+            Datas[dataUID].trdFlag = false;
+        } else if (arbTmp == 4) {
             if (end > 0) //确实外泄
             {
-                payable(Datas[dataUID].dataProvider).transfer(
-                    Datas[dataUID].dataDeposit / 4
-                );
+                payable(owner).transfer(dataRep);
             }
-            Datas[dataUID].arbitrFlag = 0;
-        } else if (arbs[msg.sender].Abtype == 5) {
+            Datas[dataUID].arbFlag = 0;
+        } else if (arbTmp == 5) {
             if (end > 0) //确实重复销售
             {
-                payable(Datas[dataUID].dataProvider).transfer(
-                    Datas[dataUID].dataDeposit / 4
-                );
-                Datas[dataUID].tradeFlag = true; //在没有交易时设为true，则不会有人可以与其进行交易，也就是对其进行封锁交易
+                payable(owner).transfer(dataRep);
+                Datas[dataUID].trdFlag = true; //在没有交易时设为true，则不会有人可以与其进行交易，也就是对其进行封锁交易
             }
-            Datas[dataUID].arbitrFlag = 0;
+            Datas[dataUID].arbFlag = 0;
         }
 
         if (end > 0) {
             arbiters[dataUID].end = 1;
             Num = uint256(int256(arbiters[dataUID].num) + end);
-            Reward = ((Num + 1) / 2) * Datas[dataUID].dataDeposit;
-            Reward /= (Num / 2);
         } else {
             arbiters[dataUID].end = -1;
             Num = uint256(int256(arbiters[dataUID].num) - end);
-            Reward = ((Num + 1) / 2) * Datas[dataUID].dataDeposit;
-            Reward /= (Num / 2);
         }
+        Reward = ((Num + 1) * 2) * dataRep;
+        Reward /= (Num / 2);
         arbiters[dataUID].Reward = Reward;
     }
 
     modifier OnlyAb(string memory dataUID, uint256 ID) {
         require(
-            uint256(keccak256(abi.encodePacked(msg.sender))) ==
+            keccak256(abi.encodePacked(msg.sender)) ==
                 arbiters[dataUID].arbiterAddHash[ID] &&
                 arbiters[dataUID].end == arbiters[dataUID].arbitResults[ID] &&
                 arbiters[dataUID].getRewards[ID] == true
