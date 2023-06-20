@@ -45,6 +45,8 @@ contract Trading {
         int8 end;
         int8[9] arbitResults;
         bool[9] getRewards;
+        string[9] AbPK;
+        string IPFS;
     }
 
     mapping(string => Data) Datas;
@@ -187,6 +189,13 @@ contract Trading {
     }
 
 
+    function transAbIPFS(
+        string memory _dataUID,
+        string memory IPFS
+    ) public {
+        arbiters[_dataUID].IPFS = IPFS;
+    }
+
     function getEVidence()
         public
         payable
@@ -215,7 +224,7 @@ contract Trading {
             return (wrongProve, "", "", ID);
         } else if (Abtype == 5) //数据重复售卖
         {
-            return (wrongProve,IPFS,"",ID);
+            return (wrongProve,IPFS,arbiters[arbs[msg.sender].dataUID].IPFS,ID);
         } else if (Abtype == 3) //密钥错误
         {
             return (wrongProve, PK, "", ID);
